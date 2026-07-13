@@ -1851,12 +1851,53 @@ function runReport(){
   });
 
   // store for PDF export
-  window.__reportData = {nameRaw, dobFormatted, genderLabel, age};
+  window.__reportData = {nameRaw, dobFormatted, genderLabel, age, coreNums};
 }
 
-function submitPhone(){
+// ==== KẾT NỐI GOOGLE SHEET (Apps Script Web App) ====
+// Dán URL /exec sau khi deploy Apps Script (xem file Code.gs) vào đây:
+const SHEET_WEBHOOK_URL = 'DÁN_URL_WEB_APP_CỦA_BẠN_VÀO_ĐÂY';
+
+async function submitPhone(){
   const v = document.getElementById('phone-input').value.trim();
   if(v.length < 8){ alert('Vui lòng nhập số điện thoại hợp lệ.'); return; }
+
+  const btn = document.querySelector('.lead-btn');
+  if(btn){ btn.disabled = true; btn.style.opacity = .6; }
+
+  const rd = window.__reportData || {};
+  const cn = rd.coreNums || {};
+  const payload = {
+    fullname: rd.nameRaw || '',
+    dob: rd.dobFormatted || '',
+    gender: rd.genderLabel || '',
+    age: rd.age || '',
+    phone: v,
+    duongDoi: cn.duongDoi ?? '',
+    suMenh: cn.suMenh ?? '',
+    linhHon: cn.linhHon ?? '',
+    tinhCach: cn.tinhCach ?? '',
+    ngaySinh: cn.ngaySinh ?? '',
+    thaiDo: cn.thaiDo ?? '',
+    truongThanh: cn.truongThanh ?? '',
+    trangThai: 'Lead mới',
+    nguon: 'Website Thần Số Học'
+  };
+
+  try{
+    if(SHEET_WEBHOOK_URL && !SHEET_WEBHOOK_URL.includes('DÁN_URL')){
+      await fetch(SHEET_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'text/plain;charset=utf-8'}, // tránh CORS preflight
+        body: JSON.stringify(payload)
+      });
+    } else {
+      console.warn('Chưa cấu hình SHEET_WEBHOOK_URL — dữ liệu chưa được gửi lên Google Sheet.');
+    }
+  }catch(err){
+    console.warn('Gửi dữ liệu lên Google Sheet thất bại:', err);
+  }
+
   document.getElementById('lead-ok').style.display='block';
   document.getElementById('phone-input').value='';
   document.getElementById('phone-input').disabled = true;
